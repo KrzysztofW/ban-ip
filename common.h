@@ -32,4 +32,4 @@ int client(char*, int, char*, char*);
 #define dbg(fmt,...)
 #endif
 
-#define IPT_DROP_IN "iptables -I INPUT -s %s -j DROP"
+#define IPT_DROP_IN "iptables -I INPUT 5 -s %s -j DROP"
