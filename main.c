@@ -23,9 +23,9 @@ int main(int argc, char *argv[])
 {
 	int opt;
 
-	char *host;
+	char *host = NULL;
 	int ret = 0, port = 0;
-	char *cmd, *arg;
+	char *cmd = NULL, *arg = NULL;
 #define flag_h 1
 #define flag_p 1 << 1
 #define flag_c 1 << 2
