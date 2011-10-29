@@ -31,3 +31,5 @@ int client(char*, int, char*, char*);
 #else
 #define dbg(fmt,...)
 #endif
+
+#define IPT_DROP_IN "iptables -I INPUT -s %s -j DROP"
