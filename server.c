@@ -87,5 +87,3 @@ int server(int port)
 	return 0;
 }
 
-/*  LocalWords:  wrn
- */
