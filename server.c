@@ -5,7 +5,6 @@ void HandleClient(int sock)
 	int received = -1;
 	data *drecv = malloc(sizeof(data));
 	char ipt_str[1024];
-	int ret = 0;
 
 	/* Receive message */
 	if ((received = recv(sock, drecv, sizeof(data), 0)) < 0) {
@@ -21,7 +20,8 @@ void HandleClient(int sock)
 		if (! strncmp(drecv->cmd, CMD_BAN, strlen(CMD_BAN))) {
 			sprintf(ipt_str, IPT_DROP_IN, drecv->addr);
 			printf("%s\n", ipt_str);
-			ret = system(ipt_str);
+			if (system(ipt_str) < 0)
+				wrn("fork failed\n");
 		}
 
 		if (send(sock, drecv, received, 0) != received) {
