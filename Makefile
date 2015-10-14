@@ -1,4 +1,4 @@
-CC=gcc -m32
+CC=gcc
 CFLAGS=-c -Wall -O3
 LDFLAGS=
 SOURCES=main.c client.c server.c

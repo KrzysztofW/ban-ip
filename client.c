@@ -82,6 +82,7 @@ int client(char *server_ip, int port, char *cmd, char *ban_ip)
 		received += bytes;
 		buffer[bytes] = '\0';        /* Assure null terminated string */
 		drecv = (data*)buffer;
+		(void)drecv;
 		dbg("%s", drecv->addr);
 	}
 	dbg("\n");
