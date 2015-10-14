@@ -79,8 +79,15 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (flags & flag_s)
+	if (flags & flag_s) {
+		int pid = fork();
+
+		if (pid < 0)
+			fprintf(stderr, "can't fork");
+		else if (pid)
+			return 0;
 		ret = server(port);
+	}
 	else
 		ret = client(host, port, cmd, arg);
 
