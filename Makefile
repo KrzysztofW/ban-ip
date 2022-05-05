@@ -15,3 +15,13 @@ $(EXECUTABLE): $(OBJECTS)
 
 clean:
 	rm -f $(EXECUTABLE) $(OBJECTS) *~
+
+install:
+	cp ban_ip /usr/local/bin/
+	cp ban_ip.service /etc/systemd/system/
+	systemctl enable ban_ip
+	systemctl start ban_ip
+uninstall:
+	systemctl disable ban_ip
+	systemctl stop ban_ip
+	rm -f /usr/local/bin/ban_ip /etc/systemd/system/ban_ip.service
