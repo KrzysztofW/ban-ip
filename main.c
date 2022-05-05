@@ -4,9 +4,7 @@
 
 #include "common.h"
 
-/* display usage */
-static void
-usage(const char *prgname)
+static void usage(const char *prgname)
 {
 	printf("%s [-l] [-h HOST] [-p PORT] [-c COMMAND] [-a ARGUMENT]\n"
 	       "\n"
@@ -14,15 +12,16 @@ usage(const char *prgname)
 	       "  -l launches the server\n"
 	       "  -h host to connect to from the client\n"
 	       "  -p port to listen on/connect to\n"
-	       "  -c command\n"
-	       "  -a arg\n",
+	       "  -c command (ban|exit)\n"
+	       "  -a arg (ip address, exit status code)\n"
+	       " server eg.: ./ban_ip -l -p 7777\n"
+	       " client eg.: ./ban_ip -h localhost -p 7777 -c ban -a 1.1.1.1\n",
 	       prgname);
 }
 
 int main(int argc, char *argv[])
 {
 	int opt;
-
 	char *host = NULL;
 	int ret = 0, port = 0;
 	char *cmd = NULL, *arg = NULL;
@@ -37,7 +36,7 @@ int main(int argc, char *argv[])
 	int client_flags = flag_h | flag_p | flag_c | flag_a;
 
 
-        while ((opt = getopt(argc, argv, "lh:p:c:a:")) != -1) {
+	while ((opt = getopt(argc, argv, "lh:p:c:a:")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
@@ -59,33 +58,27 @@ int main(int argc, char *argv[])
 			arg = optarg;
 			break;
 
-		default: /* '?' */
+		default:
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	if (flags != server_flags && flags != client_flags) {
-		//if (optind < 2) {
-		printf("flags=%X server_flags=%X client_flags=%X\n", flags, server_flags, client_flags);
-		printf("flag_h=%X ", flag_h);
-		printf("flag_p=%X ", flag_p);
-		printf("flag_c=%X ", flag_c);
-		printf("flag_a=%X ", flag_a);
-		printf("flag_s=%X ", flag_s);
-
 		fprintf(stderr, "Expected arguments\n");
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	if (flags & flag_s) {
+#ifndef DEBUG
 		int pid = fork();
 
 		if (pid < 0)
 			fprintf(stderr, "can't fork");
 		else if (pid)
 			return 0;
+#endif
 		ret = server(port);
 	}
 	else

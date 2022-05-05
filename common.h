@@ -6,15 +6,14 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
-extern int h_errno;
-
+#include <errno.h>
 
 typedef struct {
-  char addr[15];
-  char cmd[3];
+	char arg[16];
+	char cmd[4];
 } data;
 
-#define MAXPENDING 5    /* Max connection requests */
+#define MAXPENDING 5
 #define BUFFSIZE   32
 
 static inline void die(char *str) { perror(str); exit(1); }
@@ -25,6 +24,7 @@ int client(char*, int, char*, char*);
 
 /* commands */
 #define CMD_BAN "ban"
+#define CMD_EXIT "exit"
 
 #ifdef DEBUG
 #define dbg(fmt,...) fprintf(stderr, fmt, ##__VA_ARGS__)
