@@ -96,8 +96,10 @@ int server(int port)
 	struct sockaddr_in s_server, s_client;
 	int true = 1;
 
-	if ((serversock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-		die("Failed to create socket");
+	if ((serversock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+		fprintf(stderr, "Failed to create socket");
+		return -1;
+	}
 
 	memset(&s_server, 0, sizeof(s_server));
 	s_server.sin_family = AF_INET;
@@ -105,12 +107,15 @@ int server(int port)
 	s_server.sin_port = htons(port);
 
 	if (setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR,
-		       &true, sizeof(int)) < 0)
-		die("Setsockopt");
+		       &true, sizeof(int)) < 0) {
+		fprintf(stderr, "Setsockopt");
+		return -1;
+	}
 
 	if (bind(serversock, (struct sockaddr *) &s_server,
 		 sizeof(s_server)) < 0) {
-		die("Failed to bind the server socket");
+		fprintf(stderr, "Failed to bind the server socket");
+		return -1;
 	}
 
 	if (listen(serversock, MAXPENDING) < 0)
