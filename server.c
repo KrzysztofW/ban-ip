@@ -125,10 +125,20 @@ static void *antiscan_th_cb(void *arg)
 		}
 
 		openlog(prog_name, 0, LOG_USER);
+		if (wlist_ispresent(inet_ntoa(s_client.sin_addr))) {
+			syslog(LOG_NOTICE,
+			       "antiscan caught on port %u -> %s white-listed",
+			       get_port_from_socket(serversock),
+			       inet_ntoa(s_client.sin_addr));
+			closelog();
+			close(clientsock);
+			continue;
+		}
 		syslog(LOG_NOTICE, "antiscan caught on port %u -> ban IP %s",
 		       get_port_from_socket(serversock),
 		       inet_ntoa(s_client.sin_addr));
 		closelog();
+
 		sprintf(ipt_str, IPT_DROP_IN, inet_ntoa(s_client.sin_addr));
 		dbg("antiscan: %s", ipt_str);
 		if (system(ipt_str) < 0)
