@@ -1,4 +1,7 @@
 #include "common.h"
+#include <syslog.h>
+
+const char *prog_name = "ban-ip";
 
 void handle_client(int sock)
 {
@@ -15,13 +18,20 @@ void handle_client(int sock)
 
 		if (strncmp(drecv->cmd, CMD_BAN, strlen(CMD_BAN)) == 0) {
 			sprintf(ipt_str, IPT_DROP_IN, drecv->arg);
+
 			dbg("%s\n", ipt_str);
+			openlog(prog_name, 0, LOG_USER);
+			syslog(LOG_NOTICE, "permanently banned %s", drecv->arg);
+			closelog();
 
 			if (system(ipt_str) < 0)
 				wrn("fork failed\n");
 		} else if (strncmp(drecv->cmd, CMD_EXIT,
 				   strlen(CMD_EXIT)) == 0) {
 			dbg("exiting\n");
+			openlog(prog_name, 0, LOG_USER);
+			syslog(LOG_NOTICE, "exiting");
+			closelog();
 			close(sock);
 			exit(atoi(drecv->arg));
 		}
@@ -62,6 +72,10 @@ int server(int port)
 
 	if (listen(serversock, MAXPENDING) < 0)
 		die("Failed to listen on server socket");
+
+	openlog(prog_name, 0, LOG_USER);
+	syslog(LOG_NOTICE, "starting");
+	closelog();
 
 	while (1) {
 		unsigned int clientlen = sizeof(s_client);
