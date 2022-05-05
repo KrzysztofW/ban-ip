@@ -38,4 +38,10 @@ void threadlist_wipe(void);
 #define dbg(fmt,...)
 #endif
 
-#define IPT_DROP_IN "/usr/sbin/iptables -I INPUT -s %s -j DROP"
+#define IPT_BAN "/sbin/iptables -I ban-ip -s %s -j DROP"
+
+#define IPT_FLUSH "/sbin/iptables -F ban-ip"
+#define IPT_REMOVE "/sbin/iptables -D INPUT -j ban-ip"
+#define IPT_DELETE "/sbin/iptables -X ban-ip"
+#define IPT_CREATE "/sbin/iptables -N ban-ip"
+#define IPT_ADD "/sbin/iptables -I INPUT -j ban-ip"

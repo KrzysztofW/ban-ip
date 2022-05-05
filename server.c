@@ -139,7 +139,7 @@ static void *antiscan_th_cb(void *arg)
 		       inet_ntoa(s_client.sin_addr));
 		closelog();
 
-		sprintf(ipt_str, IPT_DROP_IN, inet_ntoa(s_client.sin_addr));
+		sprintf(ipt_str, IPT_BAN, inet_ntoa(s_client.sin_addr));
 		dbg("antiscan: %s", ipt_str);
 		if (system(ipt_str) < 0)
 			wrn("antiscan: fork failed %m\n");
@@ -215,7 +215,7 @@ static void handle_client(int sock)
 		dbg("drecv->cmd=%s, drecv->arg=%s\n", drecv.cmd, drecv.arg);
 
 		if (strncmp(drecv.cmd, CMD_BAN, strlen(CMD_BAN)) == 0) {
-			sprintf(ipt_str, IPT_DROP_IN, drecv.arg);
+			sprintf(ipt_str, IPT_BAN, drecv.arg);
 
 			dbg("%s\n", ipt_str);
 			openlog(prog_name, 0, LOG_USER);
@@ -240,6 +240,9 @@ static void handle_client(int sock)
 			wlist_wipe();
 			threadlist_wipe();
 			exit(atoi(drecv.arg));
+		} else {
+			wrn("invalid command\n");
+			break;
 		}
 
 		if (send(sock, &drecv, received, 0) != received) {
@@ -283,6 +286,11 @@ int server(int port)
 
 	if (listen(serversock, MAXPENDING) < 0)
 		die("Failed to listen on server socket");
+
+	if (system(IPT_FLUSH) < 0 || system(IPT_REMOVE) < 0 ||
+	    system(IPT_DELETE) < 0 || system(IPT_CREATE) ||
+	    system(IPT_ADD) < 0)
+		die("failed to initialize iptables");
 
 	openlog(prog_name, 0, LOG_USER);
 	syslog(LOG_NOTICE, "started");
