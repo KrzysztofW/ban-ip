@@ -1,4 +1,6 @@
 #include <syslog.h>
+#include <pthread.h>
+#include <signal.h>
 #include "common.h"
 #include "list.h"
 
@@ -9,6 +11,18 @@ typedef struct whitelist_entry {
 	list_t list;
 } whitelist_entry_t;
 LIST_HEAD(wlist);
+
+typedef struct threadlist_entry {
+	pthread_t thread;
+	list_t list;
+} threadlist_entry_t;
+LIST_HEAD(thlist);
+
+typedef struct portlist_entry {
+	uint16_t port;
+	list_t list;
+} portlist_entry_t;
+LIST_HEAD(plist);
 
 int wlist_add(const char *ip)
 {
@@ -36,8 +50,147 @@ void wlist_wipe(void)
 {
 	whitelist_entry_t *e, *n;
 
-	LIST_FOR_EACH_ENTRY_SAFE(e, n, &wlist, list)
+	LIST_FOR_EACH_ENTRY_SAFE(e, n, &wlist, list) {
+		list_del(&e->list);
 		free(e);
+	}
+}
+
+static pthread_t *threadlist_add(void)
+{
+	threadlist_entry_t *entry = malloc(sizeof(threadlist_entry_t));
+
+	if (entry == NULL)
+		return NULL;
+	list_add_tail(&entry->list, &thlist);
+	return &entry->thread;
+}
+
+void threadlist_wipe(void)
+{
+	threadlist_entry_t *e, *n;
+
+	LIST_FOR_EACH_ENTRY_SAFE(e, n, &thlist, list) {
+		pthread_kill(e->thread, SIGKILL);
+		pthread_join(e->thread, NULL);
+		list_del(&e->list);
+		free(e);
+	}
+}
+
+void plist_add(uint16_t port)
+{
+	portlist_entry_t *entry = malloc(sizeof(portlist_entry_t));
+
+	if (entry == NULL)
+		return;
+	entry->port = port;
+	list_add_tail(&entry->list, &plist);
+}
+
+void plist_wipe(void)
+{
+	portlist_entry_t *e, *n;
+
+	LIST_FOR_EACH_ENTRY_SAFE(e, n, &plist, list) {
+		list_del(&e->list);
+		free(e);
+	}
+}
+
+static uint16_t get_port_from_socket(int fd)
+{
+	struct sockaddr_in sin;
+	socklen_t len = sizeof(sin);
+
+	if (getsockname(fd, (struct sockaddr *)&sin, &len) < 0)
+		return 0;
+	return ntohs(sin.sin_port);
+}
+
+static void *antiscan_th_cb(void *arg)
+{
+	int serversock = (uintptr_t)arg;
+
+	while (1) {
+		int clientsock;
+		struct sockaddr_in s_client;
+		unsigned int clientlen = sizeof(s_client);
+		char ipt_str[1024];
+
+		if ((clientsock =
+		     accept(serversock, (struct sockaddr *) &s_client,
+			    &clientlen)) < 0) {
+			wrn("Failed to accept client connection");
+			continue;
+		}
+
+		openlog(prog_name, 0, LOG_USER);
+		syslog(LOG_NOTICE, "antiscan caught on port %u -> ban IP %s",
+		       get_port_from_socket(serversock),
+		       inet_ntoa(s_client.sin_addr));
+		closelog();
+		sprintf(ipt_str, IPT_DROP_IN, inet_ntoa(s_client.sin_addr));
+		dbg("antiscan: %s", ipt_str);
+		if (system(ipt_str) < 0)
+			wrn("antiscan: fork failed %m\n");
+		close(clientsock);
+	}
+	return NULL;}
+
+static int __bind_antiscan_port(uint16_t port)
+{
+	pthread_t *th;
+	int serversock;
+	struct sockaddr_in s_server;
+	int true = 1;
+
+	if ((serversock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+		fprintf(stderr, "Failed to create socket");
+		return -1;
+	}
+
+	memset(&s_server, 0, sizeof(s_server));
+	s_server.sin_family = AF_INET;
+	s_server.sin_addr.s_addr = htonl(INADDR_ANY);
+	s_server.sin_port = htons(port);
+
+	if (setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR,
+		       &true, sizeof(int)) < 0) {
+		fprintf(stderr, "Setsockopt");
+		return -1;
+	}
+
+	if (bind(serversock, (struct sockaddr *) &s_server,
+		 sizeof(s_server)) < 0) {
+		fprintf(stderr, "antiscan: failed to bind on port: %u\n", port);
+		close(serversock);
+		return -1;
+	}
+
+	if (listen(serversock, MAXPENDING) < 0)
+		die("Failed to listen on server socket");
+
+	if ((th = threadlist_add()) == NULL)
+		return -1;
+
+	openlog(prog_name, 0, LOG_USER);
+	syslog(LOG_NOTICE, "antiscan: listening on port %u", port);
+	closelog();
+
+	return pthread_create(th, NULL, antiscan_th_cb,
+			      (void *)(uintptr_t)serversock);
+}
+
+void bind_antiscan_port(void)
+{
+	portlist_entry_t *e, *tmp;
+
+	LIST_FOR_EACH_ENTRY_SAFE(e, tmp, &plist, list) {
+		__bind_antiscan_port(e->port);
+		list_del(&e->list);
+		free(e);
+	}
 }
 
 static void handle_client(int sock)
@@ -76,6 +229,7 @@ static void handle_client(int sock)
 			closelog();
 			close(sock);
 			wlist_wipe();
+			threadlist_wipe();
 			exit(atoi(drecv.arg));
 		}
 
@@ -122,7 +276,7 @@ int server(int port)
 		die("Failed to listen on server socket");
 
 	openlog(prog_name, 0, LOG_USER);
-	syslog(LOG_NOTICE, "starting");
+	syslog(LOG_NOTICE, "started");
 	closelog();
 
 	while (1) {

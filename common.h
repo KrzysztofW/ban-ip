@@ -23,6 +23,10 @@ int server(int);
 int client(char*, int, char*, char*);
 int wlist_add(const char *);
 void wlist_wipe(void);
+void bind_antiscan_port(void);
+void plist_add(uint16_t port);
+void plist_wipe(void);
+void threadlist_wipe(void);
 
 /* commands */
 #define CMD_BAN "ban"

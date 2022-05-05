@@ -15,8 +15,13 @@ static void usage(const char *prgname)
 	       "  -c command (ban|exit)\n"
 	       "  -a arg (ip address, exit status code)\n"
 	       "  -w IP (white listed IP)\n"
+	       "  -s port (port number)\n"
+	       "  -d do not fork\n"
 	       " server eg.: ./ban_ip -l -p 7777\n"
-	       " client eg.: ./ban_ip -h localhost -p 7777 -c ban -a 1.1.1.1\n",
+	       " client eg.: ./ban_ip -h localhost -p 7777 -c ban -a 1.1.1.1\n"
+	       "\n"
+	       " ban port scanners eg.:\n"
+	       " ./ban_ip -l -p 7777 -s 445 -s 23\n",
 	       prgname);
 }
 
@@ -35,8 +40,9 @@ int main(int argc, char *argv[])
 	int flags = 0;
 	int server_flags = flag_p | flag_s;
 	int client_flags = flag_h | flag_p | flag_c | flag_a;
+	int flag_fork = 1;
 
-	while ((opt = getopt(argc, argv, "lh:p:c:a:w:")) != -1) {
+	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:d")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
@@ -61,6 +67,13 @@ int main(int argc, char *argv[])
 			if (flags & flag_s)
 				wlist_add(optarg);
 			break;
+		case 's':
+			if (flags & flag_s)
+				plist_add(atoi(optarg));
+			break;
+		case 'd':
+			flag_fork = 0;
+			break;
 
 		default:
 			usage(argv[0]);
@@ -75,20 +88,23 @@ int main(int argc, char *argv[])
 	}
 
 	if (flags & flag_s) {
-#ifndef DEBUG
-		int pid = fork();
+		if (flag_fork) {
+			int pid = fork();
 
-		if (pid < 0)
-			fprintf(stderr, "can't fork");
-		else if (pid) {
-			wlist_wipe();
-			return 0;
+			if (pid < 0)
+				fprintf(stderr, "can't fork");
+			else if (pid) {
+				wlist_wipe();
+				plist_wipe();
+				return 0;
+			}
 		}
-#endif
+		bind_antiscan_port();
 		ret = server(port);
 	}
 	else
 		ret = client(host, port, cmd, arg);
 	wlist_wipe();
+	threadlist_wipe();
 	return ret;
 }
