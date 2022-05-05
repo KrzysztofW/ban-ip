@@ -10,7 +10,7 @@
 
 typedef struct {
 	char arg[16];
-	char cmd[4];
+	char cmd[10];
 } data;
 
 #define MAXPENDING 5
@@ -21,6 +21,8 @@ static inline void wrn(char *str) { perror(str); }
 
 int server(int);
 int client(char*, int, char*, char*);
+int wlist_add(const char *);
+void wlist_wipe(void);
 
 /* commands */
 #define CMD_BAN "ban"

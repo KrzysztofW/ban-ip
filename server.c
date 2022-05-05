@@ -1,46 +1,89 @@
-#include "common.h"
 #include <syslog.h>
+#include "common.h"
+#include "list.h"
 
 const char *prog_name = "ban-ip";
 
-void handle_client(int sock)
+typedef struct whitelist_entry {
+	char ip[16];
+	list_t list;
+} whitelist_entry_t;
+LIST_HEAD(wlist);
+
+int wlist_add(const char *ip)
+{
+	whitelist_entry_t *entry = malloc(sizeof(whitelist_entry_t));
+
+	if (entry == NULL)
+		return -1;
+	dbg("white listing IP: %s\n", ip);
+	strncpy(entry->ip, ip, sizeof(entry->ip) - 1);
+	list_add_tail(&entry->list, &wlist);
+	return 0;
+}
+
+static uint8_t wlist_ispresent(const char *ip)
+{
+	whitelist_entry_t *e;
+
+	LIST_FOR_EACH_ENTRY(e, &wlist, list)
+		if (strncmp(e->ip, ip, sizeof(e->ip)) == 0)
+			return 1;
+	return 0;
+}
+
+void wlist_wipe(void)
+{
+	whitelist_entry_t *e, *n;
+
+	LIST_FOR_EACH_ENTRY_SAFE(e, n, &wlist, list)
+		free(e);
+}
+
+static void handle_client(int sock)
 {
 	int received = -1;
-	data *drecv = malloc(sizeof(data));
+	data drecv;
 	char ipt_str[1024];
 
-	if ((received = recv(sock, drecv, sizeof(data), 0)) < 0)
+	if ((received = recv(sock, &drecv, sizeof(data), 0)) < 0)
 		wrn("Failed to receive initial bytes from client");
 
 	while (received > 0) {
-		dbg("drecv->cmd=%s, drecv->arg=%s\n",
-		    drecv->cmd, drecv->arg);
+		dbg("drecv->cmd=%s, drecv->arg=%s\n", drecv.cmd, drecv.arg);
 
-		if (strncmp(drecv->cmd, CMD_BAN, strlen(CMD_BAN)) == 0) {
-			sprintf(ipt_str, IPT_DROP_IN, drecv->arg);
+		if (strncmp(drecv.cmd, CMD_BAN, strlen(CMD_BAN)) == 0) {
+			sprintf(ipt_str, IPT_DROP_IN, drecv.arg);
 
 			dbg("%s\n", ipt_str);
 			openlog(prog_name, 0, LOG_USER);
-			syslog(LOG_NOTICE, "permanently banned %s", drecv->arg);
+			if (wlist_ispresent(drecv.arg))
+				syslog(LOG_NOTICE, "%s white-listed",
+				       drecv.arg);
+			else {
+				syslog(LOG_NOTICE, "permanently banned %s",
+				       drecv.arg);
+				if (system(ipt_str) < 0)
+					wrn("fork failed\n");
+			}
 			closelog();
 
-			if (system(ipt_str) < 0)
-				wrn("fork failed\n");
-		} else if (strncmp(drecv->cmd, CMD_EXIT,
+		} else if (strncmp(drecv.cmd, CMD_EXIT,
 				   strlen(CMD_EXIT)) == 0) {
 			dbg("exiting\n");
 			openlog(prog_name, 0, LOG_USER);
 			syslog(LOG_NOTICE, "exiting");
 			closelog();
 			close(sock);
-			exit(atoi(drecv->arg));
+			wlist_wipe();
+			exit(atoi(drecv.arg));
 		}
 
-		if (send(sock, drecv, received, 0) != received) {
+		if (send(sock, &drecv, received, 0) != received) {
 			wrn("Failed to send bytes to client");
 		}
 
-		if ((received = recv(sock, drecv, sizeof(data), 0)) < 0) {
+		if ((received = recv(sock, &drecv, sizeof(data), 0)) < 0) {
 			wrn("Failed to receive additional bytes from client");
 		}
 	}

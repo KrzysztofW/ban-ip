@@ -14,6 +14,7 @@ static void usage(const char *prgname)
 	       "  -p port to listen on/connect to\n"
 	       "  -c command (ban|exit)\n"
 	       "  -a arg (ip address, exit status code)\n"
+	       "  -w IP (white listed IP)\n"
 	       " server eg.: ./ban_ip -l -p 7777\n"
 	       " client eg.: ./ban_ip -h localhost -p 7777 -c ban -a 1.1.1.1\n",
 	       prgname);
@@ -35,8 +36,7 @@ int main(int argc, char *argv[])
 	int server_flags = flag_p | flag_s;
 	int client_flags = flag_h | flag_p | flag_c | flag_a;
 
-
-	while ((opt = getopt(argc, argv, "lh:p:c:a:")) != -1) {
+	while ((opt = getopt(argc, argv, "lh:p:c:a:w:")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
@@ -57,6 +57,10 @@ int main(int argc, char *argv[])
 			flags |= flag_a;
 			arg = optarg;
 			break;
+		case 'w':
+			if (flags & flag_s)
+				wlist_add(optarg);
+			break;
 
 		default:
 			usage(argv[0]);
@@ -76,13 +80,15 @@ int main(int argc, char *argv[])
 
 		if (pid < 0)
 			fprintf(stderr, "can't fork");
-		else if (pid)
+		else if (pid) {
+			wlist_wipe();
 			return 0;
+		}
 #endif
 		ret = server(port);
 	}
 	else
 		ret = client(host, port, cmd, arg);
-
+	wlist_wipe();
 	return ret;
 }

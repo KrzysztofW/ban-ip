@@ -4,7 +4,7 @@ int client(char *server_ip, int port, char *cmd, char *ban_ip)
 {
 	struct addrinfo hints, *res;
 	int err;
-	data *dsend, *drecv;
+	data dsend;
 	int sock;
 	struct sockaddr_in s_server;
 	char buffer[BUFFSIZE];
@@ -29,9 +29,8 @@ int client(char *server_ip, int port, char *cmd, char *ban_ip)
 	freeaddrinfo(res);
 
 
-	dsend = malloc(sizeof(data));
-	strncpy(dsend->arg, ban_ip, sizeof(dsend->arg) - 1);
-	strncpy(dsend->cmd, cmd, sizeof(dsend->cmd));
+	strncpy(dsend.arg, ban_ip, sizeof(dsend.arg) - 1);
+	strncpy(dsend.cmd, cmd, sizeof(dsend.cmd) - 1);
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 		die("Failed to create socket");
@@ -60,12 +59,13 @@ int client(char *server_ip, int port, char *cmd, char *ban_ip)
 		die("Failed to connect with server");
 
 	len = sizeof(data);
-	if (send(sock, dsend, len, 0) != len)
+	if (send(sock, &dsend, len, 0) != len)
 		die("Mismatch in number of sent bytes");
 
 	dbg("Received: ");
 	while (received < len) {
 		int bytes = 0;
+		data *drecv;
 
 		if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1 &&
 		    errno == 0) {
