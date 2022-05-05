@@ -1,6 +1,5 @@
 #include <syslog.h>
 #include <pthread.h>
-#include <signal.h>
 #include "common.h"
 #include "list.h"
 
@@ -71,7 +70,7 @@ void threadlist_wipe(void)
 	threadlist_entry_t *e, *n;
 
 	LIST_FOR_EACH_ENTRY_SAFE(e, n, &thlist, list) {
-		pthread_kill(e->thread, SIGKILL);
+		pthread_cancel(e->thread);
 		pthread_join(e->thread, NULL);
 		list_del(&e->list);
 		free(e);
