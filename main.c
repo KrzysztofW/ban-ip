@@ -11,6 +11,7 @@ static void usage(const char *prgname)
 	       "  -l launches the server\n"
 	       "  -h host to connect to from the client\n"
 	       "  -p port to listen on/connect to\n"
+	       "  -b bind address (only server - default localhost)\n"
 	       "  -c command (ban|exit)\n"
 	       "  -a arg (ip address, exit status code)\n"
 	       "  -w IP (white listed IP)\n"
@@ -31,6 +32,7 @@ int main(int argc, char *argv[])
 	char *host = NULL;
 	int ret = 0, port = 0;
 	char *cmd = NULL, *arg = NULL;
+	const char *bind_addr = "127.0.0.1";
 #define flag_h 1
 #define flag_p 1 << 1
 #define flag_c 1 << 2
@@ -42,7 +44,7 @@ int main(int argc, char *argv[])
 	int client_flags = flag_h | flag_p | flag_c | flag_a;
 	int flag_fork = 1;
 
-	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:d")) != -1) {
+	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:db:")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
@@ -74,6 +76,9 @@ int main(int argc, char *argv[])
 		case 'd':
 			flag_fork = 0;
 			break;
+		case 'b':
+			bind_addr = optarg;
+			break;
 
 		default:
 			usage(argv[0]);
@@ -100,7 +105,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		bind_antiscan_port();
-		ret = server(port);
+		ret = server(port, bind_addr);
 	}
 	else
 		ret = client(host, port, cmd, arg);

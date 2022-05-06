@@ -19,7 +19,7 @@ typedef struct {
 static inline void die(char *str) { perror(str); exit(1); }
 static inline void wrn(char *str) { perror(str); }
 
-int server(int);
+int server(int, const char *bind_addr);
 int client(char*, int, char*, char*);
 int wlist_add(const char *);
 void wlist_wipe(void);

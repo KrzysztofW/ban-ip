@@ -256,7 +256,7 @@ static void handle_client(int sock)
 	close(sock);
 }
 
-int server(int port)
+int server(int port, const char *bind_addr)
 {
 	int serversock, clientsock;
 	struct sockaddr_in s_server, s_client;
@@ -269,7 +269,7 @@ int server(int port)
 
 	memset(&s_server, 0, sizeof(s_server));
 	s_server.sin_family = AF_INET;
-	s_server.sin_addr.s_addr = htonl(INADDR_ANY);
+	s_server.sin_addr.s_addr = inet_addr(bind_addr);
 	s_server.sin_port = htons(port);
 
 	if (setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR,
