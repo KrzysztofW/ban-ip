@@ -36,12 +36,11 @@ int main(int argc, char *argv[])
 #define flag_h 1
 #define flag_p 1 << 1
 #define flag_c 1 << 2
-#define flag_a 1 << 3
-#define flag_s 1 << 4
+#define flag_s 1 << 3
 
 	int flags = 0;
 	int server_flags = flag_p | flag_s;
-	int client_flags = flag_h | flag_p | flag_c | flag_a;
+	int client_flags = flag_h | flag_p | flag_c;
 	int flag_fork = 1;
 
 	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:db:")) != -1) {
@@ -62,7 +61,6 @@ int main(int argc, char *argv[])
 			cmd = optarg;
 			break;
 		case 'a':
-			flags |= flag_a;
 			arg = optarg;
 			break;
 		case 'w':

@@ -202,6 +202,18 @@ void bind_antiscan_port(void)
 	}
 }
 
+static int iptables_purge(void)
+{
+	return system(IPT_FLUSH);
+}
+
+static int iptables_init(void)
+{
+	return system(IPT_FLUSH) < 0 || system(IPT_REMOVE) < 0 ||
+		system(IPT_DELETE) < 0 || system(IPT_CREATE) ||
+		system(IPT_ADD) < 0;
+}
+
 static void handle_client(int sock)
 {
 	int received = -1;
@@ -240,6 +252,12 @@ static void handle_client(int sock)
 			wlist_wipe();
 			threadlist_wipe();
 			exit(atoi(drecv.arg));
+		} else if (strncmp(drecv.cmd, CMD_PURGE,
+				   strlen(CMD_PURGE)) == 0) {
+			iptables_purge();
+			syslog(LOG_NOTICE, "iptables chain purged");
+			dbg("iptables chain purged");
+			break;
 		} else {
 			wrn("invalid command\n");
 			break;
@@ -287,9 +305,7 @@ int server(int port, const char *bind_addr)
 	if (listen(serversock, MAXPENDING) < 0)
 		die("Failed to listen on server socket");
 
-	if (system(IPT_FLUSH) < 0 || system(IPT_REMOVE) < 0 ||
-	    system(IPT_DELETE) < 0 || system(IPT_CREATE) ||
-	    system(IPT_ADD) < 0)
+	if (iptables_init() < 0)
 		die("failed to initialize iptables");
 
 	openlog(prog_name, 0, LOG_USER);

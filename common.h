@@ -20,7 +20,7 @@ static inline void die(char *str) { perror(str); exit(1); }
 static inline void wrn(char *str) { perror(str); }
 
 int server(int, const char *bind_addr);
-int client(char*, int, char*, char*);
+int client(const char*, int, const char*, const char*);
 int wlist_add(const char *);
 void wlist_wipe(void);
 void bind_antiscan_port(void);
@@ -31,6 +31,7 @@ void threadlist_wipe(void);
 /* commands */
 #define CMD_BAN "ban"
 #define CMD_EXIT "exit"
+#define CMD_PURGE "purge"
 
 #ifdef DEBUG
 #define dbg(fmt,...) fprintf(stderr, fmt, ##__VA_ARGS__)
