@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <libconfig.h>
 #include "common.h"
 
@@ -123,6 +124,13 @@ static int read_config(const char *cfg_file)
 	return ret == 0 ? flags : ret;
 }
 
+static void sig_handler(int sig)
+{
+	wlist_wipe();
+	threadlist_wipe();
+	exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
 	int opt, ret;
@@ -183,6 +191,9 @@ int main(int argc, char *argv[])
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	signal(SIGTERM, &sig_handler);
+	signal(SIGINT, &sig_handler);
 
 	if (flags & flag_s) {
 		if (flag_fork) {
