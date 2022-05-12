@@ -10,7 +10,8 @@ static int flag_fork = 1;
 static const char *host = NULL;
 static const char *cmd = NULL;
 static const char *arg = NULL;
-static const char *bind_addr = "127.0.0.1";
+static char *bind_addr = "127.0.0.1";
+static uint8_t bind_addr_alloc = 0;
 
 #define flag_h 1
 #define flag_p 1 << 1
@@ -111,6 +112,10 @@ static int read_config(const char *cfg_file)
 	}
 	flags |= flag_p;
 
+	if (config_lookup_string(&cfg, "bind_address", &str)) {
+		bind_addr = strdup(str);
+		bind_addr_alloc = 1;
+	}
 	if (config_lookup_string(&cfg, "ip_whitelist", &str)) {
 		fill_whitelist(str);
 	}
@@ -209,6 +214,8 @@ int main(int argc, char *argv[])
 		}
 		bind_antiscan_port();
 		ret = server(port, bind_addr);
+		if (bind_addr_alloc)
+			free(bind_addr);
 	}
 	else
 		ret = client(host, port, cmd, arg);
