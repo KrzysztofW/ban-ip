@@ -7,7 +7,7 @@ Type=forking
 User=root
 Group=root
 WorkingDirectory=/
-ExecStart=/usr/local/bin/ban_ip  -l -p 7777 -w 127.0.0.1 -s 445 -s 23
-ExecStop=/usr/local/bin/ban_ip -h localhost -p 7777 -c exit -a 0
+ExecStart=/usr/bin/ban_ip -f /etc/ban_ip.cfg
+ExecStop=/usr/bin/ban_ip -h localhost -p 7777 -c exit -a 0
 [Install]
 WantedBy=multi-user.target

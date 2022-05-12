@@ -18,11 +18,12 @@ clean:
 	rm -f $(EXE) $(OBJECTS) *~
 
 install:
-	cp ban_ip /usr/local/bin/
+	cp ban_ip /usr/bin/
 	cp ban_ip.service /etc/systemd/system/
+	cp ban_ip.cfg /etc/
 	systemctl enable ban_ip
 	systemctl start ban_ip
 uninstall:
 	systemctl disable ban_ip
 	systemctl stop ban_ip
-	rm -f /usr/local/bin/ban_ip /etc/systemd/system/ban_ip.service
+	rm -f /usr/bin/ban_ip /etc/systemd/system/ban_ip.service /etc/ban_ip.cfg
