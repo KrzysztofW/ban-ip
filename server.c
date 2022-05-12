@@ -79,7 +79,12 @@ void threadlist_wipe(void)
 
 void plist_add(uint16_t port)
 {
-	portlist_entry_t *entry = malloc(sizeof(portlist_entry_t));
+	portlist_entry_t *entry;
+
+	if (port == 0)
+		return;
+
+	entry = malloc(sizeof(portlist_entry_t));
 
 	if (entry == NULL)
 		return;
