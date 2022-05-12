@@ -292,13 +292,13 @@ int server(int port, const char *bind_addr)
 
 	if (setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR,
 		       &true, sizeof(int)) < 0) {
-		fprintf(stderr, "Setsockopt");
+		fprintf(stderr, "setsockopt failed: %m\n");
 		return -1;
 	}
 
 	if (bind(serversock, (struct sockaddr *) &s_server,
 		 sizeof(s_server)) < 0) {
-		fprintf(stderr, "Failed to bind the server socket");
+		fprintf(stderr, "failed to bind the server socket: %m\n");
 		return -1;
 	}
 
