@@ -36,12 +36,12 @@ static void usage(const char *prgname)
 	       "  -s port (port number)\n"
 	       "  -d do not fork\n"
 	       "  -f config file\n"
-	       " server eg.: ./ban_ip -l -p 7777\n"
-	       " client eg.: ./ban_ip -h localhost -p 7777 -c ban -a 1.1.1.1\n"
-	       "             ./ban_ip -h localhost -p 7777 -c exit -a 1\n"
+	       " server eg.: ./ban-ip -l -p 7777\n"
+	       " client eg.: ./ban-ip -h localhost -p 7777 -c ban -a 1.1.1.1\n"
+	       "             ./ban-ip -h localhost -p 7777 -c exit -a 1\n"
 	       "\n"
 	       " ban port scanners eg.:\n"
-	       " ./ban_ip -l -p 7777 -s 445 -s 23\n",
+	       " ./ban-ip -l -p 7777 -s 445 -s 23\n",
 	       prgname);
 }
 

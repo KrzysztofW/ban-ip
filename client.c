@@ -16,7 +16,7 @@ int client(const char *server_ip, int port, const char *cmd, const char *arg)
 	dbg("arg=%s\n", arg);
 
 	if (strncmp(cmd, CMD_BAN, sizeof(CMD_BAN)) == 0) {
-		/* check if the ban_ip ip address is real */
+		/* check if the ban-ip ip address is real */
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_family = AF_INET;
@@ -26,7 +26,7 @@ int client(const char *server_ip, int port, const char *cmd, const char *arg)
 			exit(1);
 		}
 
-		dbg("ban_ip: %s\n",
+		dbg("ban-ip: %s\n",
 		    inet_ntoa(((struct sockaddr_in *)
 			       (res->ai_addr))->sin_addr));
 		freeaddrinfo(res);

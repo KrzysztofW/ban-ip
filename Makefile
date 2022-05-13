@@ -4,7 +4,7 @@ LDFLAGS=-lpthread
 STATIC_LIB=$(shell find /usr/lib -name libconfig.a)
 SOURCES=main.c client.c server.c
 OBJECTS=$(SOURCES:.c=.o)
-EXE=ban_ip
+EXE=ban-ip
 
 all: $(SOURCES) $(EXE)
 
@@ -18,12 +18,12 @@ clean:
 	rm -f $(EXE) $(OBJECTS) *~
 
 install:
-	cp ban_ip /usr/bin/
-	cp ban_ip.service /etc/systemd/system/
-	cp ban_ip.cfg /etc/
-	systemctl enable ban_ip
-	systemctl start ban_ip
+	cp $(EXE) /usr/bin/
+	cp ban-ip.service /etc/systemd/system/
+	cp ban-ip.cfg /etc/
+	systemctl enable ban-ip
+	systemctl start ban-ip
 uninstall:
-	systemctl disable ban_ip
-	systemctl stop ban_ip
-	rm -f /usr/bin/ban_ip /etc/systemd/system/ban_ip.service /etc/ban_ip.cfg
+	systemctl disable ban-ip
+	systemctl stop ban-ip
+	rm -f /usr/bin/ban-ip /etc/systemd/system/ban-ip.service /etc/ban-ip.cfg
