@@ -26,6 +26,7 @@ void wlist_wipe(void);
 void bind_antiscan_port(void);
 void plist_add(uint16_t port);
 void plist_wipe(void);
+void fdlist_wipe(void);
 void threadlist_wipe(void);
 
 /* commands */

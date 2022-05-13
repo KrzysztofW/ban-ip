@@ -5,13 +5,14 @@
 #include <libconfig.h>
 #include "common.h"
 
-static int port = 0;
+static int port;
 static int flag_fork = 1;
-static const char *host = NULL;
-static const char *cmd = NULL;
-static const char *arg = NULL;
+static const char *host;
+static const char *cmd;
+static const char *arg;
 static char *bind_addr = "127.0.0.1";
-static uint8_t bind_addr_alloc = 0;
+static uint8_t bind_addr_alloc;
+const char *cfg_file;
 
 #define flag_h 1
 #define flag_p 1 << 1
@@ -95,7 +96,7 @@ static int load_cfg(config_t *cfg, const char *filename)
     return 0;
 }
 
-static int read_config(const char *cfg_file)
+static int read_config(void)
 {
 	int flags = flag_s, ret = 0;
 	config_t cfg;
@@ -132,14 +133,28 @@ static int read_config(const char *cfg_file)
 static void sig_handler(int sig)
 {
 	wlist_wipe();
+	fdlist_wipe();
 	threadlist_wipe();
+	if (bind_addr)
+		free(bind_addr);
 	exit(EXIT_SUCCESS);
+}
+
+static void sig_usr_handler(int sig)
+{
+	if (cfg_file == NULL)
+		return;
+	fdlist_wipe();
+	threadlist_wipe();
+	wlist_wipe();
+	free(bind_addr);
+	read_config();
+	bind_antiscan_port();
 }
 
 int main(int argc, char *argv[])
 {
 	int opt, ret;
-	const char *cfg_file = NULL;
 	int flags = 0;
 	int server_flags = flag_p | flag_s;
 	int client_flags = flag_h | flag_p | flag_c;
@@ -189,7 +204,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (cfg_file)
-		flags = read_config(cfg_file);
+		flags = read_config();
 
 	if (flags != server_flags && flags != client_flags) {
 		fprintf(stderr, "Expected arguments\n");
@@ -199,6 +214,7 @@ int main(int argc, char *argv[])
 
 	signal(SIGTERM, &sig_handler);
 	signal(SIGINT, &sig_handler);
+	signal(SIGUSR1, &sig_usr_handler);
 
 	if (flags & flag_s) {
 		if (flag_fork) {
@@ -208,7 +224,6 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "can't fork");
 			else if (pid) {
 				wlist_wipe();
-				plist_wipe();
 				return 0;
 			}
 		}

@@ -17,11 +17,12 @@ typedef struct threadlist_entry {
 } threadlist_entry_t;
 LIST_HEAD(thlist);
 
-typedef struct portlist_entry {
-	uint16_t port;
+typedef struct intlist_entry {
+	uint16_t i;
 	list_t list;
-} portlist_entry_t;
+} intlist_entry_t;
 LIST_HEAD(plist);
+LIST_HEAD(fdlist);
 
 int wlist_add(const char *ip)
 {
@@ -77,27 +78,33 @@ void threadlist_wipe(void)
 	}
 }
 
-void plist_add(uint16_t port)
+static void __int_list_add(uint16_t i, list_t *list_head)
 {
-	portlist_entry_t *entry;
+	intlist_entry_t *entry;
 
-	if (port == 0)
+	if (i == 0)
 		return;
 
-	entry = malloc(sizeof(portlist_entry_t));
+	entry = malloc(sizeof(intlist_entry_t));
 
 	if (entry == NULL)
 		return;
-	entry->port = port;
-	list_add_tail(&entry->list, &plist);
+	entry->i = i;
+	list_add_tail(&entry->list, list_head);
 }
 
-void plist_wipe(void)
+void plist_add(uint16_t port)
 {
-	portlist_entry_t *e, *n;
+	__int_list_add(port, &plist);
+}
 
-	LIST_FOR_EACH_ENTRY_SAFE(e, n, &plist, list) {
+void fdlist_wipe(void)
+{
+	intlist_entry_t *e, *n;
+
+	LIST_FOR_EACH_ENTRY_SAFE(e, n, &fdlist, list) {
 		list_del(&e->list);
+		close(e->i);
 		free(e);
 	}
 }
@@ -192,16 +199,17 @@ static int __bind_antiscan_port(uint16_t port)
 	syslog(LOG_NOTICE, "antiscan: listening on port %u", port);
 	closelog();
 
+	__int_list_add(serversock, &fdlist);
 	return pthread_create(th, NULL, antiscan_th_cb,
 			      (void *)(uintptr_t)serversock);
 }
 
 void bind_antiscan_port(void)
 {
-	portlist_entry_t *e, *tmp;
+	intlist_entry_t *e, *tmp;
 
 	LIST_FOR_EACH_ENTRY_SAFE(e, tmp, &plist, list) {
-		__bind_antiscan_port(e->port);
+		__bind_antiscan_port(e->i);
 		list_del(&e->list);
 		free(e);
 	}
@@ -256,6 +264,7 @@ static void handle_client(int sock)
 			close(sock);
 			wlist_wipe();
 			threadlist_wipe();
+			fdlist_wipe();
 			exit(atoi(drecv.arg));
 		} else if (strncmp(drecv.cmd, CMD_PURGE,
 				   strlen(CMD_PURGE)) == 0) {
