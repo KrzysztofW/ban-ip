@@ -22,12 +22,13 @@ int client(const char *server_ip, int port, const char *cmd, const char *arg)
 		hints.ai_family = AF_INET;
 
 		if ((err = getaddrinfo(arg, NULL, &hints, &res)) != 0) {
-			fprintf(stderr, "invalid ban IP `%s': %m", arg);
+			fprintf(stderr, "invalid ban IP `%s'\n", arg);
 			exit(1);
 		}
 
 		dbg("ban_ip: %s\n",
-		    inet_ntoa(((struct sockaddr_in *)(res->ai_addr))->sin_addr));
+		    inet_ntoa(((struct sockaddr_in *)
+			       (res->ai_addr))->sin_addr));
 		freeaddrinfo(res);
 	}
 

@@ -240,10 +240,20 @@ static void handle_client(int sock)
 		dbg("drecv->cmd=%s, drecv->arg=%s\n", drecv.cmd, drecv.arg);
 
 		if (strncmp(drecv.cmd, CMD_BAN, strlen(CMD_BAN)) == 0) {
-			sprintf(ipt_str, IPT_BAN, drecv.arg);
+			struct in_addr in;
+			const char *ip = drecv.arg;
+
+			sprintf(ipt_str, IPT_BAN, ip);
 
 			dbg("%s\n", ipt_str);
 			openlog(prog_name, 0, LOG_USER);
+
+			if (!inet_aton(ip, &in)) {
+				syslog(LOG_ERR, "invalid IP address: %s",
+				       ip);
+				closelog();
+				break;
+			}
 			if (wlist_ispresent(drecv.arg))
 				syslog(LOG_NOTICE, "%s white-listed",
 				       drecv.arg);
