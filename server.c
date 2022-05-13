@@ -3,7 +3,7 @@
 #include "common.h"
 #include "list.h"
 
-const char *prog_name = "ban-ip";
+extern const char *prog_name;
 
 typedef struct whitelist_entry {
 	char ip[16];
@@ -227,6 +227,37 @@ static int iptables_init(void)
 		system(IPT_ADD) < 0;
 }
 
+static int check_local_ip(const char *ip)
+{
+	/**
+	 * do not block these IP addresses:
+	 *
+	 * 10.0.0.0 to 10.255.255.255
+	 * 192.168.0.0 to 192.168.255.255
+	 * 127.0.0.0 to 127.255.255.255
+	 * 0.0.0.0 to 0.255.255.255
+	 * 172.16.0.0 to 172.31.255.255
+	 * and 255.255.255.255
+	*/
+
+	struct in_addr in;
+	struct in_addr mask_in;
+
+	if (strncmp("10.", ip, 3) == 0)
+		return 1;
+	if (strncmp("192.168.", ip, 8) == 0)
+		return 1;
+	if (strncmp("127.", ip, 4) == 0)
+		return 1;
+	if (strncmp("0.", ip, 2) == 0)
+		return 1;
+	if (strncmp("255.255.255.255", ip, 15) == 0)
+		return 1;
+	if (!inet_aton(ip, &in) || !inet_aton("172.31.255.255", &mask_in))
+		return -1;
+	return (in.s_addr | mask_in.s_addr) == mask_in.s_addr;
+}
+
 static void handle_client(int sock)
 {
 	int received = -1;
@@ -254,12 +285,18 @@ static void handle_client(int sock)
 				closelog();
 				break;
 			}
-			if (wlist_ispresent(drecv.arg))
-				syslog(LOG_NOTICE, "%s white-listed",
-				       drecv.arg);
+			if (check_local_ip(ip)) {
+				dbg("%s is local\n", ip);
+				syslog(LOG_ERR,
+				       "blocking local IPs is forbidden (%s)",
+				       ip);
+				closelog();
+				break;
+			}
+			if (wlist_ispresent(ip))
+				syslog(LOG_NOTICE, "%s white-listed", ip);
 			else {
-				syslog(LOG_NOTICE, "permanently banned %s",
-				       drecv.arg);
+				syslog(LOG_NOTICE, "permanently banned %s", ip);
 				if (system(ipt_str) < 0)
 					wrn("fork failed\n");
 			}

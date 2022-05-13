@@ -2,6 +2,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <syslog.h>
 #include <libconfig.h>
 #include "common.h"
 
@@ -12,7 +13,8 @@ static const char *cmd;
 static const char *arg;
 static char *bind_addr = "127.0.0.1";
 static uint8_t bind_addr_alloc;
-const char *cfg_file;
+static const char *cfg_file;
+const char *prog_name = "ban-ip";
 
 #define flag_h 1
 #define flag_p 1 << 1
@@ -144,6 +146,9 @@ static void sig_usr_handler(int sig)
 {
 	if (cfg_file == NULL)
 		return;
+	openlog(prog_name, 0, LOG_USER);
+	syslog(LOG_NOTICE, "reloading configuration");
+	closelog();
 	fdlist_wipe();
 	threadlist_wipe();
 	wlist_wipe();
