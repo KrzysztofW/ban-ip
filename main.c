@@ -36,6 +36,7 @@ static void usage(const char *prgname)
 	       "  -s port (port number)\n"
 	       "  -d do not fork\n"
 	       "  -f config file\n"
+	       "  -L list commands\n"
 	       " server eg.: ./ban-ip -l -p 7777\n"
 	       " client eg.: ./ban-ip -h localhost -p 7777 -c ban -a 1.1.1.1\n"
 	       "             ./ban-ip -h localhost -p 7777 -c exit -a 1\n"
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
 	int server_flags = flag_p | flag_s;
 	int client_flags = flag_h | flag_p | flag_c;
 
-	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:db:f:")) != -1) {
+	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:db:f:L")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
@@ -201,6 +202,9 @@ int main(int argc, char *argv[])
 		case 'f':
 			cfg_file = optarg;
 			break;
+		case 'L':
+			list_commands();
+			exit(EXIT_SUCCESS);
 
 		default:
 			usage(argv[0]);

@@ -34,6 +34,13 @@ void threadlist_wipe(void);
 #define CMD_EXIT "exit"
 #define CMD_PURGE "purge"
 
+static inline void list_commands(void)
+{
+	printf(CMD_BAN" <IP>\n");
+	printf(CMD_EXIT" <code>\n");
+	printf(CMD_PURGE"\n");
+}
+
 #ifdef DEBUG
 #define dbg(fmt,...) fprintf(stderr, fmt, ##__VA_ARGS__)
 #else
