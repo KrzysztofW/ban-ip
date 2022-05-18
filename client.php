@@ -5,7 +5,15 @@ if (!$fp) {
     return;
 }
 /* $ip = "2.2.2.255"; */
-$ip = $_SERVER['REMOTE_ADDR'];
+
+/* direct usage */
+/* $ip = $_SERVER['REMOTE_ADDR']; */
+
+/* if used behide a reverse proxy */
+$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+$x_for = $_SERVER['HTTP_X_FORWARDED_FOR'];
+$l = explode(",", $x_for);
+$ip = trim(end($l));
 
 /* see common.h for padding lengths */
 $ip = str_pad($ip,  16, "\x00");
