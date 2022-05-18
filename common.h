@@ -28,6 +28,7 @@ void plist_add(uint16_t port);
 void plist_wipe(void);
 void fdlist_wipe(void);
 void threadlist_wipe(void);
+void itables_cleanup(void);
 
 /* commands */
 #define CMD_BAN "ban"
@@ -50,7 +51,9 @@ static inline void list_commands(void)
 #define IPT_BAN "/sbin/iptables -I ban-ip -s %s -j DROP"
 
 #define IPT_FLUSH "/sbin/iptables -F ban-ip"
-#define IPT_REMOVE "/sbin/iptables -D INPUT -j ban-ip"
+#define IPT_REMOVE_FROM_FORWARD "/sbin/iptables -D FORWARD -j ban-ip"
+#define IPT_REMOVE_FROM_INPUT "/sbin/iptables -D INPUT -j ban-ip"
 #define IPT_DELETE "/sbin/iptables -X ban-ip"
 #define IPT_CREATE "/sbin/iptables -N ban-ip"
-#define IPT_ADD "/sbin/iptables -I INPUT -j ban-ip"
+#define IPT_ADD_TO_FORWARD "/sbin/iptables -I FORWARD -j ban-ip"
+#define IPT_ADD_TO_INPUT "/sbin/iptables -I INPUT -j ban-ip"

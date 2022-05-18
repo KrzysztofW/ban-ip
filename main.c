@@ -15,6 +15,8 @@ static char *bind_addr = "127.0.0.1";
 static uint8_t bind_addr_alloc;
 static const char *cfg_file;
 const char *prog_name = "ban-ip";
+uint8_t ipt_forward_chain = 0;
+uint8_t ipt_input_chain = 0;
 
 #define flag_h 1
 #define flag_p 1 << 1
@@ -99,6 +101,35 @@ static int load_cfg(config_t *cfg, const char *filename)
     return 0;
 }
 
+static int set_ipt_chains(const char *list)
+{
+	while (list[0]) {
+		char item[8];
+		int n = 0;
+
+		while (list[0] != ' ' && list[0] != '\0') {
+			if (n > sizeof(item))
+				return -1;
+			item[n++] = list[0];
+			list++;
+		}
+		item[n] = '\0';
+		if (strncmp(item, "FORWARD", sizeof(item)) == 0) {
+			ipt_forward_chain = 1;
+		} else if (strncmp(item, "INPUT", sizeof(item)) == 0) {
+			ipt_input_chain = 1;
+		} else {
+			fprintf(stderr, "invalid iptables chain `%s'\n", item);
+			openlog(prog_name, 0, LOG_USER);
+			syslog(LOG_NOTICE, "invalid iptables chain `%s'", item);
+			closelog();
+		}
+		if (list[0] != '\0')
+			list++;
+	}
+	return 0;
+}
+
 static int read_config(void)
 {
 	int flags = flag_s, ret = 0;
@@ -126,6 +157,11 @@ static int read_config(void)
 	if (config_lookup_string(&cfg, "trap_ports", &str)) {
 		fill_trap_ports(str);
 	}
+	if (config_lookup_string(&cfg, "iptables_chains", &str)) {
+		set_ipt_chains(str);
+		if (ipt_forward_chain == 0 && ipt_input_chain == 0)
+			ipt_input_chain = 1;
+	}
 	config_lookup_bool(&cfg, "fork", &flag_fork);
 
  end:
@@ -140,6 +176,7 @@ static void sig_handler(int sig)
 	threadlist_wipe();
 	if (bind_addr)
 		free(bind_addr);
+	itables_cleanup();
 	exit(EXIT_SUCCESS);
 }
 
@@ -212,6 +249,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* cleanup eventually broken iptables configuration */
+	itables_cleanup();
+
 	if (cfg_file)
 		flags = read_config();
 
@@ -240,6 +280,7 @@ int main(int argc, char *argv[])
 		ret = server(port, bind_addr);
 		if (bind_addr_alloc)
 			free(bind_addr);
+		itables_cleanup();
 	}
 	else
 		ret = client(host, port, cmd, arg);

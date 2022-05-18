@@ -4,6 +4,8 @@
 #include "list.h"
 
 extern const char *prog_name;
+extern uint8_t ipt_forward_chain;
+extern uint8_t ipt_input_chain;
 
 typedef struct whitelist_entry {
 	char ip[16];
@@ -220,11 +222,32 @@ static int iptables_purge(void)
 	return system(IPT_FLUSH);
 }
 
+static int __itables_cleanup(void)
+{
+	return (system(IPT_FLUSH" 2>/dev/null") |
+		system(IPT_REMOVE_FROM_FORWARD" 2>/dev/null") |
+		system(IPT_REMOVE_FROM_INPUT" 2>/dev/null") |
+		system(IPT_DELETE" 2>/dev/null"));
+}
+
+void itables_cleanup(void)
+{
+	while (__itables_cleanup() == 0) {}
+}
+
 static int iptables_init(void)
 {
-	return system(IPT_FLUSH) < 0 || system(IPT_REMOVE) < 0 ||
-		system(IPT_DELETE) < 0 || system(IPT_CREATE) ||
-		system(IPT_ADD) < 0;
+	itables_cleanup();
+
+	if (system(IPT_CREATE) < 0)
+		return -1;
+	if (ipt_forward_chain && system(IPT_ADD_TO_FORWARD) < 0)
+		return -1;
+	if (ipt_input_chain && system(IPT_ADD_TO_INPUT) < 0)
+		return -1;
+	if (ipt_forward_chain == 0 && ipt_input_chain == 0)
+		return -1;
+	return 0;
 }
 
 static int check_local_ip(const char *ip)
@@ -312,6 +335,7 @@ static void handle_client(int sock)
 			wlist_wipe();
 			threadlist_wipe();
 			fdlist_wipe();
+			itables_cleanup();
 			exit(atoi(drecv.arg));
 		} else if (strncmp(drecv.cmd, CMD_PURGE,
 				   strlen(CMD_PURGE)) == 0) {

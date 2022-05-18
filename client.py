@@ -3,8 +3,8 @@ import socket
 HOST = "127.0.0.1"
 PORT = 7777
 
-#ip = b"1.2.3.244"
-ip = request.META.get('REMOTE_ADDR')
+ip = b"127.0.0.2"
+#ip = request.META.get('REMOTE_ADDR')
 cmd = b"ban"
 
 ip_pad = 16 - len(ip)
