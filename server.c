@@ -390,8 +390,10 @@ int server(int port, const char *bind_addr)
 	if (listen(serversock, MAXPENDING) < 0)
 		die("Failed to listen on server socket");
 
-	if (iptables_init() < 0)
+	if (iptables_init() < 0) {
+		itables_cleanup();
 		die("failed to initialize iptables");
+	}
 
 	openlog(prog_name, 0, LOG_USER);
 	syslog(LOG_NOTICE, "started");
