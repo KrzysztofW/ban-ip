@@ -254,6 +254,8 @@ int main(int argc, char *argv[])
 
 	if (cfg_file)
 		flags = read_config();
+	else
+		ipt_input_chain = 1;
 
 	if (flags != server_flags && flags != client_flags) {
 		fprintf(stderr, "Expected arguments\n");
@@ -281,8 +283,7 @@ int main(int argc, char *argv[])
 		if (bind_addr_alloc)
 			free(bind_addr);
 		itables_cleanup();
-	}
-	else
+	} else
 		ret = client(host, port, cmd, arg);
 	wlist_wipe();
 	threadlist_wipe();

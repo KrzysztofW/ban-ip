@@ -276,9 +276,9 @@ static int check_local_ip(const char *ip)
 		return 1;
 	if (strncmp("255.255.255.255", ip, 15) == 0)
 		return 1;
-	if (!inet_aton(ip, &in) || !inet_aton("172.31.255.255", &mask_in))
+	if (!inet_aton(ip, &in) || !inet_aton("172.16.0.0", &mask_in))
 		return -1;
-	return (in.s_addr | mask_in.s_addr) == mask_in.s_addr;
+	return (in.s_addr & mask_in.s_addr) == mask_in.s_addr;
 }
 
 static void handle_client(int sock)
