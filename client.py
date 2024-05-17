@@ -3,7 +3,7 @@ import socket
 HOST = "127.0.0.1"
 PORT = 7777
 
-#ip = b"127.0.0.2"
+ip = b"127.0.0.2"
 
 # direct usage
 #ip = request.META.get('REMOTE_ADDR')
@@ -21,13 +21,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
 
 """" In a django view: """
-# direct usage
-#ip = str.encode(request.META.get('REMOTE_ADDR'))
-
-# if used behide a reverse proxy
-ip = request.META.get('HTTP_X_FORWARDED_FOR')
-if ip == "":
-    return HttpResponse('')
-
-ip = ip.split(', ')[-1]
-ip = str.encode(ip)
+## direct usage
+##ip = str.encode(request.META.get('REMOTE_ADDR'))
+#
+## if used behide a reverse proxy
+#ip = request.META.get('HTTP_X_FORWARDED_FOR')
+#if ip == "":
+#    return HttpResponse('')
+#
+#ip = ip.split(', ')[-1]
+#ip = str.encode(ip)
