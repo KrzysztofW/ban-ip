@@ -58,6 +58,37 @@ void wlist_wipe(void)
 	}
 }
 
+static int check_local_ip(const char *ip)
+{
+	/**
+	 * do not block these IP addresses:
+	 *
+	 * 10.0.0.0 to 10.255.255.255
+	 * 192.168.0.0 to 192.168.255.255
+	 * 127.0.0.0 to 127.255.255.255
+	 * 0.0.0.0 to 0.255.255.255
+	 * 172.16.0.0 to 172.31.255.255
+	 * and 255.255.255.255
+	*/
+
+	struct in_addr in;
+	struct in_addr mask_in;
+
+	if (strncmp("10.", ip, 3) == 0)
+		return 1;
+	if (strncmp("192.168.", ip, 8) == 0)
+		return 1;
+	if (strncmp("127.", ip, 4) == 0)
+		return 1;
+	if (strncmp("0.", ip, 2) == 0)
+		return 1;
+	if (strncmp("255.255.255.255", ip, 15) == 0)
+		return 1;
+	if (!inet_aton(ip, &in) || !inet_aton("172.16.0.0", &mask_in))
+		return -1;
+	return (in.s_addr & mask_in.s_addr) == mask_in.s_addr;
+}
+
 static pthread_t *threadlist_add(void)
 {
 	threadlist_entry_t *entry = malloc(sizeof(threadlist_entry_t));
@@ -130,6 +161,7 @@ static void *antiscan_th_cb(void *arg)
 		struct sockaddr_in s_client;
 		unsigned int clientlen = sizeof(s_client);
 		char ipt_str[1024];
+		char *ip;
 
 		if ((clientsock =
 		     accept(serversock, (struct sockaddr *) &s_client,
@@ -138,23 +170,32 @@ static void *antiscan_th_cb(void *arg)
 			continue;
 		}
 
+		ip = inet_ntoa(s_client.sin_addr);
 		openlog(prog_name, 0, LOG_USER);
-		if (wlist_ispresent(inet_ntoa(s_client.sin_addr))) {
+
+		if (check_local_ip(ip)) {
+			dbg("%s is local\n", ip);
+			syslog(LOG_ERR, "antiscan: blocking local IPs is "
+			       "forbidden (%s)", ip);
+			closelog();
+			break;
+		}
+
+		if (wlist_ispresent(ip)) {
 			syslog(LOG_NOTICE,
 			       "antiscan caught on port %u -> %s white-listed",
-			       get_port_from_socket(serversock),
-			       inet_ntoa(s_client.sin_addr));
+			       get_port_from_socket(serversock), ip);
 			closelog();
 			close(clientsock);
 			continue;
 		}
 		syslog(LOG_NOTICE, "antiscan caught on port %u -> ban IP %s",
-		       get_port_from_socket(serversock),
-		       inet_ntoa(s_client.sin_addr));
+		       get_port_from_socket(serversock), ip);
 		closelog();
 
-		sprintf(ipt_str, IPT_BAN, inet_ntoa(s_client.sin_addr));
+		sprintf(ipt_str, IPT_BAN, ip);
 		dbg("antiscan: %s", ipt_str);
+
 		if (system(ipt_str) < 0)
 			wrn("antiscan: fork failed %m\n");
 		close(clientsock);
@@ -248,37 +289,6 @@ static int iptables_init(void)
 	if (ipt_forward_chain == 0 && ipt_input_chain == 0)
 		return -1;
 	return 0;
-}
-
-static int check_local_ip(const char *ip)
-{
-	/**
-	 * do not block these IP addresses:
-	 *
-	 * 10.0.0.0 to 10.255.255.255
-	 * 192.168.0.0 to 192.168.255.255
-	 * 127.0.0.0 to 127.255.255.255
-	 * 0.0.0.0 to 0.255.255.255
-	 * 172.16.0.0 to 172.31.255.255
-	 * and 255.255.255.255
-	*/
-
-	struct in_addr in;
-	struct in_addr mask_in;
-
-	if (strncmp("10.", ip, 3) == 0)
-		return 1;
-	if (strncmp("192.168.", ip, 8) == 0)
-		return 1;
-	if (strncmp("127.", ip, 4) == 0)
-		return 1;
-	if (strncmp("0.", ip, 2) == 0)
-		return 1;
-	if (strncmp("255.255.255.255", ip, 15) == 0)
-		return 1;
-	if (!inet_aton(ip, &in) || !inet_aton("172.16.0.0", &mask_in))
-		return -1;
-	return (in.s_addr & mask_in.s_addr) == mask_in.s_addr;
 }
 
 static void handle_client(int sock)
