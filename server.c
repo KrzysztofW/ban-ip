@@ -72,7 +72,8 @@ static int check_local_ip(const char *ip)
 	*/
 
 	struct in_addr in;
-	struct in_addr mask_in;
+	struct in_addr start_ip;
+	struct in_addr end_ip;
 
 	if (strncmp("10.", ip, 3) == 0)
 		return 1;
@@ -84,9 +85,14 @@ static int check_local_ip(const char *ip)
 		return 1;
 	if (strncmp("255.255.255.255", ip, 15) == 0)
 		return 1;
-	if (!inet_aton(ip, &in) || !inet_aton("172.16.0.0", &mask_in))
+	if (!inet_aton(ip, &in) ||
+	    !inet_aton("172.16.0.0", &start_ip) ||
+	    !inet_aton("172.31.255.255", &end_ip))
 		return -1;
-	return (in.s_addr & mask_in.s_addr) == mask_in.s_addr;
+	start_ip.s_addr = ntohl(start_ip.s_addr);
+	end_ip.s_addr = ntohl(end_ip.s_addr);
+	in.s_addr = ntohl(in.s_addr);
+	return in.s_addr > start_ip.s_addr && in.s_addr < end_ip.s_addr;
 }
 
 static pthread_t *threadlist_add(void)
