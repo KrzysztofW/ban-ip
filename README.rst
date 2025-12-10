@@ -64,7 +64,7 @@ In order to compile ban-ip you need these packets:
 Example configuration file
 ==========================
 
-..
+::
 
   /* ban-ip server configuration file */
 
