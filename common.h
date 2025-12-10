@@ -59,3 +59,4 @@ static inline void list_commands(void)
 #define IPT_CREATE "/sbin/iptables -N ban-ip"
 #define IPT_ADD_TO_FORWARD "/sbin/iptables -I FORWARD -j ban-ip"
 #define IPT_ADD_TO_INPUT "/sbin/iptables -I INPUT -j ban-ip"
+#define IPT_NFQUEUE "/sbin/iptables -I ban-ip -p tcp --dport %d --syn -j NFQUEUE --queue-num %d"

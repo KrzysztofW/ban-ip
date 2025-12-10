@@ -17,6 +17,7 @@ static const char *cfg_file;
 const char *prog_name = "ban-ip";
 uint8_t ipt_forward_chain;
 uint8_t ipt_input_chain;
+int nfqueue_nb = -1;
 
 #define flag_h 1
 #define flag_p 1 << 1
@@ -37,6 +38,7 @@ static void usage(const char *prgname)
 	       "  -a arg (ip address, exit status code)\n"
 	       "  -w IP (white listed IP)\n"
 	       "  -s port (port number)\n"
+	       "  -n nfqueue number (use nfqueue instead of socket binding)\n"
 	       "  -d do not fork\n"
 	       "  -f config file\n"
 	       "  -L list commands\n"
@@ -164,7 +166,7 @@ static int read_config(void)
 			ipt_input_chain = 1;
 	}
 	config_lookup_bool(&cfg, "fork", &flag_fork);
-
+	config_lookup_int(&cfg, "nfqueue_number", &nfqueue_nb);
  end:
 	config_destroy(&cfg);
 	return ret == 0 ? flags : ret;
@@ -203,7 +205,7 @@ int main(int argc, char *argv[])
 	int server_flags = flag_p | flag_s;
 	int client_flags = flag_h | flag_p | flag_c;
 
-	while ((opt = getopt(argc, argv, "lhH:p:c:a:w:s:db:f:L")) != -1) {
+	while ((opt = getopt(argc, argv, "lhH:p:c:a:w:s:db:f:Ln:")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
@@ -239,6 +241,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'f':
 			cfg_file = optarg;
+			break;
+		case 'n':
+			nfqueue_nb = atoi(optarg);
 			break;
 		case 'L':
 			list_commands();
