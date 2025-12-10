@@ -183,10 +183,12 @@ static void sig_handler(int sig)
 	exit(EXIT_SUCCESS);
 }
 
-static void sig_usr_handler(int sig)
+void reload_cfg(void)
 {
 	if (cfg_file == NULL)
 		return;
+
+	iptables_init();
 	openlog(prog_name, 0, LOG_USER);
 	syslog(LOG_NOTICE, "reloading configuration");
 	closelog();
@@ -196,6 +198,11 @@ static void sig_usr_handler(int sig)
 	free(bind_addr);
 	read_config();
 	bind_antiscan_port();
+}
+
+static void sig_usr_handler(int sig)
+{
+	reload_cfg();
 }
 
 int main(int argc, char *argv[])

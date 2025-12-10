@@ -451,11 +451,6 @@ void bind_antiscan_port(void)
 	}
 }
 
-static int iptables_purge(void)
-{
-	return system(IPT_FLUSH);
-}
-
 static int __iptables_cleanup(void)
 {
 	return (system(IPT_FLUSH" 2>/dev/null") |
@@ -468,6 +463,12 @@ void iptables_cleanup(void)
 {
 	while (__iptables_cleanup() == 0) {}
 	nfqueue_close();
+}
+
+static void iptables_purge(void)
+{
+	iptables_cleanup();
+	reload_cfg();
 }
 
 int iptables_init(void)

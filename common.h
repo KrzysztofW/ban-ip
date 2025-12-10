@@ -31,6 +31,7 @@ void fdlist_wipe(void);
 void threadlist_wipe(void);
 void iptables_cleanup(void);
 int iptables_init(void);
+void reload_cfg(void);
 
 /* commands */
 #define CMD_BAN "ban"
