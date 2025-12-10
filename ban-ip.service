@@ -8,6 +8,6 @@ User=root
 Group=root
 WorkingDirectory=/
 ExecStart=/usr/bin/ban-ip -f /etc/ban-ip.cfg
-ExecStop=/usr/bin/ban-ip -h localhost -p 7777 -c exit -a 0
+ExecStop=/usr/bin/ban-ip -H localhost -p 7777 -c exit -a 0
 [Install]
 WantedBy=multi-user.target

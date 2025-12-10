@@ -69,7 +69,7 @@ static int check_local_ip(const char *ip)
 	 * 0.0.0.0 to 0.255.255.255
 	 * 172.16.0.0 to 172.31.255.255
 	 * and 255.255.255.255
-	*/
+	 */
 
 	struct in_addr in;
 	struct in_addr start_ip;
@@ -112,6 +112,16 @@ void threadlist_wipe(void)
 	LIST_FOR_EACH_ENTRY_SAFE(e, n, &thlist, list) {
 		pthread_cancel(e->thread);
 		pthread_join(e->thread, NULL);
+		list_del(&e->list);
+		free(e);
+	}
+}
+
+void plist_wipe(void)
+{
+	intlist_entry_t *e, *n;
+
+	LIST_FOR_EACH_ENTRY_SAFE(e, n, &plist, list) {
 		list_del(&e->list);
 		free(e);
 	}
@@ -206,7 +216,8 @@ static void *antiscan_th_cb(void *arg)
 			wrn("antiscan: fork failed %m\n");
 		close(clientsock);
 	}
-	return NULL;}
+	return NULL;
+}
 
 static int __bind_antiscan_port(uint16_t port)
 {
@@ -269,7 +280,7 @@ static int iptables_purge(void)
 	return system(IPT_FLUSH);
 }
 
-static int __itables_cleanup(void)
+static int __iptables_cleanup(void)
 {
 	return (system(IPT_FLUSH" 2>/dev/null") |
 		system(IPT_REMOVE_FROM_FORWARD" 2>/dev/null") |
@@ -277,14 +288,14 @@ static int __itables_cleanup(void)
 		system(IPT_DELETE" 2>/dev/null"));
 }
 
-void itables_cleanup(void)
+void iptables_cleanup(void)
 {
-	while (__itables_cleanup() == 0) {}
+	while (__iptables_cleanup() == 0) {}
 }
 
-static int iptables_init(void)
+int iptables_init(void)
 {
-	itables_cleanup();
+	iptables_cleanup();
 
 	if (system(IPT_CREATE) < 0)
 		return -1;
@@ -351,7 +362,7 @@ static void handle_client(int sock)
 			wlist_wipe();
 			threadlist_wipe();
 			fdlist_wipe();
-			itables_cleanup();
+			iptables_cleanup();
 			exit(atoi(drecv.arg));
 		} else if (strncmp(drecv.cmd, CMD_PURGE,
 				   strlen(CMD_PURGE)) == 0) {
@@ -405,11 +416,6 @@ int server(int port, const char *bind_addr)
 
 	if (listen(serversock, MAXPENDING) < 0)
 		die("Failed to listen on server socket");
-
-	if (iptables_init() < 0) {
-		itables_cleanup();
-		die("failed to initialize iptables");
-	}
 
 	openlog(prog_name, 0, LOG_USER);
 	syslog(LOG_NOTICE, "started");

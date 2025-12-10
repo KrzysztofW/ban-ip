@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-c -Wall -O3
 LDFLAGS=-lpthread
-STATIC_LIB=$(shell find /usr/lib -name libconfig.a)
+STATIC_LIB=$(shell find /usr/lib -name libconfig.a 2> /dev/null)
 SOURCES=main.c client.c server.c
 OBJECTS=$(SOURCES:.c=.o)
 EXE=ban-ip

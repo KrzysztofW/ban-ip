@@ -23,12 +23,14 @@ int server(int, const char *bind_addr);
 int client(const char*, int, const char*, const char*);
 int wlist_add(const char *);
 void wlist_wipe(void);
+void plist_wipe(void);
 void bind_antiscan_port(void);
 void plist_add(uint16_t port);
 void plist_wipe(void);
 void fdlist_wipe(void);
 void threadlist_wipe(void);
-void itables_cleanup(void);
+void iptables_cleanup(void);
+int iptables_init(void);
 
 /* commands */
 #define CMD_BAN "ban"

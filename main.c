@@ -15,8 +15,8 @@ static char *bind_addr = "127.0.0.1";
 static uint8_t bind_addr_alloc;
 static const char *cfg_file;
 const char *prog_name = "ban-ip";
-uint8_t ipt_forward_chain = 0;
-uint8_t ipt_input_chain = 0;
+uint8_t ipt_forward_chain;
+uint8_t ipt_input_chain;
 
 #define flag_h 1
 #define flag_p 1 << 1
@@ -25,11 +25,12 @@ uint8_t ipt_input_chain = 0;
 
 static void usage(const char *prgname)
 {
-	printf("%s [-l] [-h HOST] [-p PORT] [-c COMMAND] [-a ARGUMENT]\n"
+	printf("%s [-l] [-H HOST] [-p PORT] [-c COMMAND] [-a ARGUMENT]\n"
 	       "\n"
 
+	       "  -h shows this help\n"
 	       "  -l launches the server\n"
-	       "  -h host to connect to from the client\n"
+	       "  -H host to connect to from the client\n"
 	       "  -p port to listen on/connect to\n"
 	       "  -b bind address (only server - default localhost)\n"
 	       "  -c command (ban|exit)\n"
@@ -174,9 +175,9 @@ static void sig_handler(int sig)
 	wlist_wipe();
 	fdlist_wipe();
 	threadlist_wipe();
-	if (bind_addr)
+	if (bind_addr_alloc)
 		free(bind_addr);
-	itables_cleanup();
+	iptables_cleanup();
 	exit(EXIT_SUCCESS);
 }
 
@@ -202,12 +203,12 @@ int main(int argc, char *argv[])
 	int server_flags = flag_p | flag_s;
 	int client_flags = flag_h | flag_p | flag_c;
 
-	while ((opt = getopt(argc, argv, "lh:p:c:a:w:s:db:f:L")) != -1) {
+	while ((opt = getopt(argc, argv, "lhH:p:c:a:w:s:db:f:L")) != -1) {
 		switch (opt) {
 		case 'l':
 			flags |= flag_s;
 			break;
-		case 'h':
+		case 'H':
 			host = optarg;
 			flags |= flag_h;
 			break;
@@ -250,7 +251,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* cleanup eventually broken iptables configuration */
-	itables_cleanup();
+	iptables_cleanup();
 
 	if (cfg_file)
 		flags = read_config();
@@ -275,14 +276,19 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "can't fork");
 			else if (pid) {
 				wlist_wipe();
+				plist_wipe();
 				return 0;
 			}
+		}
+		if (iptables_init() < 0) {
+			iptables_cleanup();
+			die("failed to initialize iptables");
 		}
 		bind_antiscan_port();
 		ret = server(port, bind_addr);
 		if (bind_addr_alloc)
 			free(bind_addr);
-		itables_cleanup();
+		iptables_cleanup();
 	} else
 		ret = client(host, port, cmd, arg);
 	wlist_wipe();
