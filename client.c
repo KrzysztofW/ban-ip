@@ -4,16 +4,20 @@ int client(const char *server_ip, int port, const char *cmd, const char *arg)
 {
 	struct addrinfo hints, *res;
 	int err;
-	data dsend;
 	int sock;
 	struct sockaddr_in s_server;
-	char buffer[BUFFSIZE];
-	unsigned int len;
-	int received = 0;
+	char buffer[1024];
+	char *buf_pos = buffer;
+	uint16_t len;
 
 	dbg("server_ip=%s\n", server_ip);
 	dbg("cmd=%s\n", cmd);
 	dbg("arg=%s\n", arg);
+
+	if (cmd == NULL) {
+		fprintf(stderr, "empty command\n");
+		exit(1);
+	}
 
 	if (strncmp(cmd, CMD_BAN, sizeof(CMD_BAN)) == 0) {
 		/* check if the ban-ip ip address is real */
@@ -32,10 +36,22 @@ int client(const char *server_ip, int port, const char *cmd, const char *arg)
 		freeaddrinfo(res);
 	}
 
-	memset(&dsend, 0, sizeof(dsend));
+	memset(buffer, 0, sizeof(buffer));
+	len = strlen(cmd) + 1;
+
 	if (arg)
-		strncpy(dsend.arg, arg, sizeof(dsend.arg) - 1);
-	strncpy(dsend.cmd, cmd, sizeof(dsend.cmd) - 1);
+		len += strlen(arg) + 1;
+
+	len = htons(len);
+	memcpy(buf_pos, (char *)&len, sizeof(len));
+	len = ntohs(len);
+	buf_pos += sizeof(len);
+	buf_pos += snprintf(buf_pos, sizeof(buffer) - (buf_pos - buffer),
+			    "%s", cmd) + 1;
+	if (arg)
+		buf_pos += snprintf(buf_pos,
+				    sizeof(buffer) - (buf_pos - buffer),
+				    "%s", arg) + 1;
 
 	if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
 		die("Failed to create socket");
@@ -64,30 +80,11 @@ int client(const char *server_ip, int port, const char *cmd, const char *arg)
 	if (connect(sock, (struct sockaddr *) &s_server, sizeof(s_server)) < 0)
 		die("Failed to connect with server");
 
-	len = sizeof(data);
-	if (send(sock, &dsend, len, 0) != len)
+	len += sizeof(len);
+	if (send(sock, buffer, len, 0) != len)
 		die("Mismatch in number of sent bytes");
 
-	dbg("Received: ");
-	while (received < len) {
-		int bytes = 0;
-		data *drecv;
-
-		if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1 &&
-		    errno == 0) {
-			printf("done\n");
-			exit(0);
-		}
-		if (bytes < 0)
-			die("Failed to receive bytes from server");
-
-		received += bytes;
-		buffer[bytes] = '\0';
-		drecv = (data*)buffer;
-		(void)drecv;
-		dbg("%s", drecv->arg);
-	}
-	dbg("\n");
+	printf("done\n");
 	close(sock);
 	exit(0);
 }

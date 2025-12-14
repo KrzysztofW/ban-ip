@@ -11,7 +11,7 @@
 extern const char *prog_name;
 extern uint8_t ipt_forward_chain;
 extern uint8_t ipt_input_chain;
-extern int nfqueue_nb;
+extern int16_t nfqueue_nb;
 
 typedef struct whitelist_entry {
 	char ip[16];
@@ -270,7 +270,7 @@ static int nfqueue_get_tcp_port(unsigned char *data, int len)
 	struct iphdr *iph = (struct iphdr *)data;
 	struct tcphdr *tcph;
 
-        if (iph->protocol != IPPROTO_TCP)
+	if (iph->protocol != IPPROTO_TCP)
 		return -1;
 
 	tcph = (struct tcphdr *)(data + iph->ihl * 4);
@@ -451,6 +451,11 @@ void bind_antiscan_port(void)
 	}
 }
 
+static int iptables_purge(void)
+{
+	return system(IPT_FLUSH);
+}
+
 static int __iptables_cleanup(void)
 {
 	return (system(IPT_FLUSH" 2>/dev/null") |
@@ -463,12 +468,6 @@ void iptables_cleanup(void)
 {
 	while (__iptables_cleanup() == 0) {}
 	nfqueue_close();
-}
-
-static void iptables_purge(void)
-{
-	iptables_cleanup();
-	reload_cfg();
 }
 
 int iptables_init(void)
@@ -490,79 +489,88 @@ int iptables_init(void)
 
 static void handle_client(int sock)
 {
-	int received = -1;
-	data drecv;
-	char ipt_str[1024];
+	int received;
+	char drecv[1024];
+	char *data;
+	uint16_t data_len;
 
-	if ((received = recv(sock, &drecv, sizeof(data), 0)) < 0)
+	if ((received = recv(sock, &drecv, sizeof(drecv), 0)) < 0 ||
+	    received < sizeof(uint16_t)) {
 		wrn("Failed to receive initial bytes from client");
-
-	while (received > 0) {
-		dbg("drecv->cmd=%s, drecv->arg=%s\n", drecv.cmd, drecv.arg);
-
-		if (strncmp(drecv.cmd, CMD_BAN, strlen(CMD_BAN)) == 0) {
-			struct in_addr in;
-			const char *ip = drecv.arg;
-
-			sprintf(ipt_str, IPT_BAN, ip);
-
-			dbg("%s\n", ipt_str);
-			openlog(prog_name, 0, LOG_USER);
-
-			if (!inet_aton(ip, &in)) {
-				syslog(LOG_ERR, "invalid IP address: %s",
-				       ip);
-				closelog();
-				break;
-			}
-			if (check_local_ip(ip)) {
-				dbg("%s is local\n", ip);
-				syslog(LOG_ERR,
-				       "blocking local IPs is forbidden (%s)",
-				       ip);
-				closelog();
-				break;
-			}
-			if (wlist_ispresent(ip))
-				syslog(LOG_NOTICE, "%s white-listed", ip);
-			else {
-				syslog(LOG_NOTICE, "permanently banned %s", ip);
-				if (system(ipt_str) < 0)
-					wrn("fork failed\n");
-			}
-			closelog();
-
-		} else if (strncmp(drecv.cmd, CMD_EXIT,
-				   strlen(CMD_EXIT)) == 0) {
-			dbg("exiting\n");
-			openlog(prog_name, 0, LOG_USER);
-			syslog(LOG_NOTICE, "exiting");
-			closelog();
-			close(sock);
-			wlist_wipe();
-			threadlist_wipe();
-			fdlist_wipe();
-			iptables_cleanup();
-			exit(atoi(drecv.arg));
-		} else if (strncmp(drecv.cmd, CMD_PURGE,
-				   strlen(CMD_PURGE)) == 0) {
-			iptables_purge();
-			syslog(LOG_NOTICE, "iptables chain purged");
-			dbg("iptables chain purged");
-			break;
-		} else {
-			wrn("invalid command\n");
-			break;
-		}
-
-		if (send(sock, &drecv, received, 0) != received) {
-			wrn("Failed to send bytes to client");
-		}
-
-		if ((received = recv(sock, &drecv, sizeof(data), 0)) < 0) {
-			wrn("Failed to receive additional bytes from client");
-		}
+		close(sock);
+		return;
 	}
+
+	data_len = ntohs(*(uint16_t *)drecv);
+	if (received < data_len) {
+		wrn("Did not receive enough data from client. "
+		    "Dropping connection...");
+		close(sock);
+		return;
+	}
+
+	openlog(prog_name, 0, LOG_USER);
+	data = drecv + sizeof(uint16_t);
+
+	if (strncmp(data, CMD_BAN, strlen(CMD_BAN)) == 0) {
+		char ipt_str[1024];
+		struct in_addr in;
+		const char *ip = data + strlen(CMD_BAN) + 1;
+		const char *desc;
+		int ip_len;
+
+		data_len -= strlen(CMD_BAN) + 1;
+		ip_len = strnlen(ip, data_len);
+
+		if (ip_len > data_len || ip_len > IPv4_MAX_LEN) {
+			syslog(LOG_ERR, "invalid IP length: %d", ip_len);
+			goto end;
+		}
+
+		if (!inet_aton(ip, &in)) {
+			syslog(LOG_ERR, "invalid IP address: %s", ip);
+			goto end;
+		}
+		if (check_ip(ip, -1) < 0)
+			goto end;
+
+		sprintf(ipt_str, IPT_BAN, ip);
+		dbg("%s\n", ipt_str);
+
+		desc = ip + ip_len + 1;
+		data_len -= ip_len + 1;
+
+		if (system(ipt_str) == 0)
+			syslog(LOG_NOTICE, "permanently banned %s (%.*s)", ip,
+			       data_len, desc);
+		else {
+			syslog(LOG_ERR, "failed to add iptables rule to ban %s",
+			       ip);
+			fprintf(stderr,
+				"failed to add iptables rule to ban %s\n", ip);
+		}
+	} else if (strncmp(data, CMD_EXIT, strlen(CMD_EXIT)) == 0) {
+		dbg("exiting\n");
+		syslog(LOG_NOTICE, "exiting");
+		closelog();
+		close(sock);
+		wlist_wipe();
+		threadlist_wipe();
+		fdlist_wipe();
+		iptables_cleanup();
+		exit(atoi(data + strlen(CMD_EXIT) + 1));
+	} else if (strncmp(data, CMD_PURGE, strlen(CMD_PURGE)) == 0) {
+		iptables_purge();
+		syslog(LOG_NOTICE, "iptables chain purged");
+		dbg("iptables chain purged");
+		goto end;
+	} else {
+		wrn("invalid command\n");
+		goto end;
+	}
+
+ end:
+	closelog();
 	close(sock);
 }
 

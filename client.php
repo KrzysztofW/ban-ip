@@ -16,9 +16,13 @@ $ip = $_SERVER['REMOTE_ADDR'];
 #$ip = trim(end($l));
 
 /* see common.h for padding lengths */
-$ip = str_pad($ip,  16, "\x00");
-$cmd = str_pad("ban", 10, "\x00");
+$cmd = "ban";
+$desc = "application name";
 
-fwrite($fp, $ip.$cmd);
+$to_send = $cmd."\x00".$ip."\x00".$desc;
+$len = pack("n", strlen($to_send)); // 'n' = 16-bit unsigned, big-endian
+$to_send = $len.$to_send;
+
+fwrite($fp, $to_send);
 fclose($fp);
 ?>

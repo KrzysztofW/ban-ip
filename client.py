@@ -3,17 +3,17 @@ import socket
 HOST = "127.0.0.1"
 PORT = 7777
 
-ip = b"127.0.0.2"
+ip = b"85.34.55.44"
 
 # direct usage
 #ip = request.META.get('REMOTE_ADDR')
 
 cmd = b"ban"
+desc = b"application XXX"
 
-ip_pad = 16 - len(ip)
-cmd_pad = 10 - len(cmd)
-
-to_send = ip + b"\0" * ip_pad + cmd + b"\0" * cmd_pad
+to_send = cmd + b"\0" + ip + b"\0" + desc
+length = len(to_send).to_bytes(2, byteorder="big") # 16-bit unsigned, big-endian
+to_send = length + to_send
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))

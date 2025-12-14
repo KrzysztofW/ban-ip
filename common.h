@@ -8,13 +8,8 @@
 #include <netdb.h>
 #include <errno.h>
 
-typedef struct {
-	char arg[16];
-	char cmd[10];
-} data;
-
 #define MAXPENDING 5
-#define BUFFSIZE   32
+#define IPv4_MAX_LEN 15
 
 static inline void die(char *str) { perror(str); exit(1); }
 static inline void wrn(char *str) { perror(str); }
@@ -31,7 +26,6 @@ void fdlist_wipe(void);
 void threadlist_wipe(void);
 void iptables_cleanup(void);
 int iptables_init(void);
-void reload_cfg(void);
 
 /* commands */
 #define CMD_BAN "ban"
